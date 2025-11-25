@@ -31,16 +31,25 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
 
   // CSS STYLES
   const customCSS = `
+    /* HIDE SCROLLBARS GLOBALLY */
+    ::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      display: none;
+    }
+    
     body {
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f0f0f0; /* Light gray background for contrast */
+      background-color: #f0f0f0; 
+      /* PREVENT SCROLLING */
+      overflow: hidden; 
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
     }
 
-    /* STATUS BAR: Small notification at the top so user knows it's working.
-       It is outside #content-to-print, so it won't be in the PDF.
-    */
+    /* STATUS BAR */
     #status-bar {
       position: fixed;
       top: 0;
@@ -55,19 +64,25 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    /* CONTENT: Visible and centered.
-       This ensures the PDF engine can capture it perfectly.
-    */
+    /* PREVIEW CONTAINER */
+    #preview-container {
+      display: flex;
+      justify-content: center;
+      padding-top: 60px;
+      padding-bottom: 40px;
+      width: 100%;
+    }
+
+    /* CONTENT TO PRINT: Pure content. No margins, no shadows. */
     #content-to-print {
       width: ${dimensions[0]}px;
       background-color: #ffffff;
-      margin: 40px auto; /* Center it and give space for status bar */
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Drop shadow to look like a paper */
+      margin: 0; 
+      padding: 0;
+      box-shadow: none; 
     }
 
-    /* SUCCESS OVERLAY: Hidden initially.
-       Appears ONLY after the download starts.
-    */
+    /* SUCCESS OVERLAY */
     #success-overlay {
       position: fixed;
       top: 0;
@@ -76,7 +91,7 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
       height: 100vh;
       background: #ffffff;
       z-index: 9999;
-      display: none; /* Hidden by default */
+      display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -102,24 +117,26 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
     </head>
     <body>
       
-      <!-- 1. Small Status Bar (User sees this briefly) -->
+      <!-- Status Bar -->
       <div id="status-bar">Generating PDF...</div>
 
-      <!-- 2. The Content (Visible on screen so it captures correctly) -->
-      <div id="content-to-print">
-        ${html}
+      <!-- Wrapper -->
+      <div id="preview-container">
+        <!-- The Actual Content -->
+        <div id="content-to-print">
+          ${html}
+        </div>
       </div>
 
-      <!-- 3. Success Overlay (Appears at the end) -->
+      <!-- Success Overlay -->
       <div id="success-overlay">
-        <div class="success-icon">✓</div>
-        <h2>Download gestart!</h2>
-        <p>Je kunt dit venster nu sluiten.</p>
+        <div class="success-icon">✅</div>
+        <h2>Download Started!</h2>
+        <p>You can close this window now.</p>
       </div>
 
       <script>
         window.onload = function() {
-          // Wait 800ms to let images/fonts render on screen
           setTimeout(function() {
               
             var element = document.getElementById('content-to-print');
@@ -131,7 +148,7 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
                     useCORS: true, 
                     scale: ${quality},
                     scrollY: 0,
-                    windowWidth: ${dimensions[0]} + 100, // Ensure capture width
+                    windowWidth: ${dimensions[0]} + 100,
                     width: ${dimensions[0]}
                 },
                 jsPDF: { 
@@ -142,14 +159,10 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
                 }
             };
     
-            // Generate PDF
             html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdf) {
-                // Save File
                 pdf.save(${JSON.stringify(fileName)});
                 
-                // Show Success Overlay
                 document.getElementById('success-overlay').style.display = 'flex';
-                // Hide status bar
                 document.getElementById('status-bar').style.display = 'none';
                 
             }).catch(function(error) {
