@@ -34,60 +34,61 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
     body {
       margin: 0;
       padding: 0;
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f0f0f0; /* Light gray background for contrast */
     }
 
-    /* FIX: instead of left: -9999px, we put it at top:0 left:0 
-       but give it z-index: -1 so it sits BEHIND the loader.
-       We also enforce a white background so it's opaque.
+    /* STATUS BAR: Small notification at the top so user knows it's working.
+       It is outside #content-to-print, so it won't be in the PDF.
     */
-    #content-to-print {
-      position: absolute;
+    #status-bar {
+      position: fixed;
       top: 0;
       left: 0;
-      width: ${dimensions[0]}px; /* Enforce exact width */
-      z-index: -1;
-      background-color: #ffffff;
+      width: 100%;
+      background: #333;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    /* The Loading Overlay covers the entire screen */
-    #loading-ui {
+    /* CONTENT: Visible and centered.
+       This ensures the PDF engine can capture it perfectly.
+    */
+    #content-to-print {
+      width: ${dimensions[0]}px;
+      background-color: #ffffff;
+      margin: 40px auto; /* Center it and give space for status bar */
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Drop shadow to look like a paper */
+    }
+
+    /* SUCCESS OVERLAY: Hidden initially.
+       Appears ONLY after the download starts.
+    */
+    #success-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
       background: #ffffff;
-      z-index: 999; /* Sit on top of the content */
-      display: flex;
+      z-index: 9999;
+      display: none; /* Hidden by default */
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
     }
 
-    h2 { margin: 10px 0 5px; font-size: 18px; color: #333; }
+    h2 { margin: 10px 0 5px; font-size: 20px; color: #333; }
     p { margin: 0; font-size: 14px; color: #666; }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15px;
-    }
     
     .success-icon {
-      font-size: 40px;
-      display: none;
-      margin-bottom: 15px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      font-size: 50px;
+      margin-bottom: 20px;
     }
   `;
 
@@ -101,28 +102,24 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
     </head>
     <body>
       
-      <!-- 1. The Cover Screen (User sees this) -->
-      <div id="loading-ui">
-        <div class="spinner"></div>
-        <h2 id="status-title">Generating PDF...</h2>
-        <p id="status-desc">Please wait while we prepare your file.</p>
-        
-        <!-- Success message hidden by default -->
-        <div id="success-ui" style="display:none;">
-          <div class="success-icon">✅</div>
-          <h2>Download Started!</h2>
-          <p>You can close this window now.</p>
-        </div>
-      </div>
+      <!-- 1. Small Status Bar (User sees this briefly) -->
+      <div id="status-bar">Generating PDF...</div>
 
-      <!-- 2. The Content (Hidden behind the cover, but visible to PDF generator) -->
+      <!-- 2. The Content (Visible on screen so it captures correctly) -->
       <div id="content-to-print">
         ${html}
       </div>
 
+      <!-- 3. Success Overlay (Appears at the end) -->
+      <div id="success-overlay">
+        <div class="success-icon">✓</div>
+        <h2>Download gestart!</h2>
+        <p>Je kunt dit venster nu sluiten.</p>
+      </div>
+
       <script>
         window.onload = function() {
-          // Small delay to ensure styles render before we capture
+          // Wait 800ms to let images/fonts render on screen
           setTimeout(function() {
               
             var element = document.getElementById('content-to-print');
@@ -134,7 +131,8 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
                     useCORS: true, 
                     scale: ${quality},
                     scrollY: 0,
-                    scrollX: 0
+                    windowWidth: ${dimensions[0]} + 100, // Ensure capture width
+                    width: ${dimensions[0]}
                 },
                 jsPDF: { 
                     unit: 'px', 
@@ -144,24 +142,23 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
                 }
             };
     
+            // Generate PDF
             html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdf) {
+                // Save File
                 pdf.save(${JSON.stringify(fileName)});
                 
-                // Hide spinner, show success
-                document.querySelector('.spinner').style.display = 'none';
-                document.getElementById('status-title').style.display = 'none';
-                document.getElementById('status-desc').style.display = 'none';
-                
-                document.getElementById('success-ui').style.display = 'block';
-                document.querySelector('.success-icon').style.display = 'block';
+                // Show Success Overlay
+                document.getElementById('success-overlay').style.display = 'flex';
+                // Hide status bar
+                document.getElementById('status-bar').style.display = 'none';
                 
             }).catch(function(error) {
                 console.error(error);
-                document.getElementById('status-title').innerText = "Error";
-                document.getElementById('status-desc').innerText = "Could not generate PDF.";
+                document.getElementById('status-bar').innerText = "Error generating PDF";
+                document.getElementById('status-bar').style.backgroundColor = "red";
             });
 
-          }, 500); // 500ms delay to prevent blank pages
+          }, 800); 
         };
       </script>
     </body>
