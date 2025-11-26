@@ -147,9 +147,9 @@ window.function = function (html, fileName, format, zoom, orientation, margin, b
         <div id="content-to-print">${html}</div>
       </div>
       <div id="success-overlay">
-        <div class="success-icon">✅</div>
-        <h2>Download Started!</h2>
-        <p>You can close this window now.</p>
+        <div class="success-icon">✓</div>
+        <h2>Download gestart!</h2>
+        <p>Je kunt dit venster nu sluiten</p>
       </div>
 
       <script>
